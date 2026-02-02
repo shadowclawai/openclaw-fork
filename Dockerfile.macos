@@ -88,6 +88,9 @@ done
 # Chown workspace root but not recursively (preserves git object permissions)
 chown node:node /home/node/.openclaw /home/node/.openclaw/workspace 2>/dev/null || true
 
+# Ensure Solana/Anchor/Cargo dirs are writable by node user (for building contracts)
+chmod -R a+rwX /root/.cargo /root/.rustup /root/.local 2>/dev/null || true
+
 # Run command as node user
 exec gosu node "$@"
 ENTRYPOINT
