@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import {
@@ -52,7 +53,7 @@ export function renderGatewayServiceCleanupHints(
 }
 
 function resolveHomeDir(env: Record<string, string | undefined>): string {
-  const home = env.HOME?.trim() || env.USERPROFILE?.trim();
+  const home = env.HOME?.trim() || env.USERPROFILE?.trim() || os.homedir();
   if (!home) {
     throw new Error("Missing HOME");
   }

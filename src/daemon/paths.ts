@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import { resolveGatewayProfileSuffix } from "./constants.js";
 
@@ -5,7 +6,8 @@ const windowsAbsolutePath = /^[a-zA-Z]:[\\/]/;
 const windowsUncPath = /^\\\\/;
 
 export function resolveHomeDir(env: Record<string, string | undefined>): string {
-  const home = env.HOME?.trim() || env.USERPROFILE?.trim();
+  // Prefer env vars but fall back to os.homedir() for native macOS/Linux
+  const home = env.HOME?.trim() || env.USERPROFILE?.trim() || os.homedir();
   if (!home) {
     throw new Error("Missing HOME");
   }
