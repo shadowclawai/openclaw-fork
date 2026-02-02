@@ -10,13 +10,30 @@
 
 FROM node:22-bookworm
 
-# Install gosu for proper user switching
-# Bun installed via npm for reproducible builds (avoids curl|bash supply chain risk)
+# Install gosu for proper user switching + build dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gosu && \
+    apt-get install -y --no-install-recommends gosu curl git build-essential pkg-config libssl-dev libudev-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     npm install -g bun@1.2.0
 ENV PATH="/root/.bun/bin:${PATH}"
+
+# Install Rust, Solana CLI via unified installer (x86_64)
+RUN curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
+
+# Build Anchor CLI from source (pre-built binaries need glibc 2.39+)
+ENV RUSTUP_HOME=/root/.rustup \
+    CARGO_HOME=/root/.cargo \
+    PATH=/root/.cargo/bin:${PATH}
+RUN cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked --force
+
+# Make tools accessible to node user (need write for cargo registry)
+RUN chmod a+x /root && \
+    chmod -R a+rwX /root/.rustup /root/.cargo /root/.local && \
+    ln -sf /root/.cargo/bin/cargo /usr/local/bin/cargo && \
+    ln -sf /root/.cargo/bin/rustc /usr/local/bin/rustc && \
+    ln -sf /root/.cargo/bin/anchor /usr/local/bin/anchor && \
+    ln -sf /root/.local/share/solana/install/active_release/bin/solana /usr/local/bin/solana && \
+    ln -sf /root/.local/share/solana/install/active_release/bin/solana-keygen /usr/local/bin/solana-keygen
 
 RUN corepack enable
 

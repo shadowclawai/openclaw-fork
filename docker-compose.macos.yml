@@ -13,10 +13,16 @@
 #     echo "USER=$(whoami)" >> .env
 #     echo "HOME=$HOME" >> .env
 
+name: openclaw
+
 services:
   openclaw-gateway:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.macos
     image: ${OPENCLAW_IMAGE:-openclaw:macos}
-    # Note: container_name omitted to allow multiple instances/profiles
+    container_name: openclaw
     environment:
       HOME: /home/node
       TERM: xterm-256color
