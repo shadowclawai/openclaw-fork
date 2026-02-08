@@ -24,7 +24,8 @@ export type AuthChoiceGroupId =
   | "venice"
   | "qwen"
   | "qianfan"
-  | "xai";
+  | "xai"
+  | "nvidia-nim";
 
 export type AuthChoiceGroup = {
   value: AuthChoiceGroupId;
@@ -141,6 +142,12 @@ const AUTH_CHOICE_GROUP_DEFS: {
     hint: "Account ID + Gateway ID + API key",
     choices: ["cloudflare-ai-gateway-api-key"],
   },
+  {
+    value: "nvidia-nim",
+    label: "NVIDIA NIM",
+    hint: "API key (Llama, Nemotron, DeepSeek, Kimi)",
+    choices: ["nvidia-nim-api-key"],
+  },
 ];
 
 export function buildAuthChoiceOptions(params: {
@@ -236,6 +243,11 @@ export function buildAuthChoiceOptions(params: {
     value: "minimax-api-lightning",
     label: "MiniMax M2.1 Lightning",
     hint: "Faster, higher output cost",
+  });
+  options.push({
+    value: "nvidia-nim-api-key",
+    label: "NVIDIA NIM API key",
+    hint: "Llama, Nemotron, DeepSeek, Kimi via integrate.api.nvidia.com",
   });
   if (params.includeSkip) {
     options.push({ value: "skip", label: "Skip for now" });
