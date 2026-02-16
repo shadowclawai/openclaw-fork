@@ -5,7 +5,8 @@
 
 type RateLimitBucket = {
   timestamps: number[];
-  pendingDelay: Promise<void> | null;
+  /** Promise chain to serialize all operations on this bucket */
+  operationChain: Promise<void>;
 };
 
 const RATE_LIMIT_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
@@ -23,7 +24,7 @@ const agentBuckets = new Map<string, RateLimitBucket>();
 function getBucket(agentId: string): RateLimitBucket {
   let bucket = agentBuckets.get(agentId);
   if (!bucket) {
-    bucket = { timestamps: [], pendingDelay: null };
+    bucket = { timestamps: [], operationChain: Promise.resolve() };
     agentBuckets.set(agentId, bucket);
   }
   return bucket;
@@ -68,31 +69,31 @@ function calculateDelayMs(bucket: RateLimitBucket, now: number): number {
  */
 export async function enforceAgentRateLimit(agentId: string): Promise<void> {
   const bucket = getBucket(agentId);
-  const now = Date.now();
 
-  // If there's already a pending delay for this agent, wait for it first
-  if (bucket.pendingDelay) {
-    await bucket.pendingDelay;
-  }
+  // Chain this operation onto the bucket's promise chain to prevent race conditions
+  const operationPromise = bucket.operationChain.then(async () => {
+    const now = Date.now();
+    pruneOldTimestamps(bucket, now);
 
-  // Recalculate delay after waiting (timestamps may have been pruned)
-  const delayMs = calculateDelayMs(bucket, Date.now());
+    // Calculate delay needed before this message can send
+    const delayMs = calculateDelayMs(bucket, now);
 
-  if (delayMs > 0) {
-    // Create delay promise and store it so subsequent calls wait for it
-    const delayPromise = new Promise<void>((resolve) => {
-      setTimeout(() => {
-        bucket.pendingDelay = null;
-        resolve();
-      }, delayMs);
-    });
-    bucket.pendingDelay = delayPromise;
-    await delayPromise;
-  }
+    if (delayMs > 0) {
+      // Wait until rate limit budget is available
+      await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+      // Prune again after delay
+      pruneOldTimestamps(bucket, Date.now());
+    }
 
-  // Record this message timestamp
-  bucket.timestamps.push(Date.now());
-  pruneOldTimestamps(bucket, Date.now());
+    // Record this message timestamp
+    bucket.timestamps.push(Date.now());
+  });
+
+  // Update the chain so next call waits for this one
+  bucket.operationChain = operationPromise;
+
+  // Wait for this operation to complete
+  await operationPromise;
 }
 
 /**
