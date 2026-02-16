@@ -365,6 +365,7 @@ export async function processDiscordMessage(ctx: DiscordMessagePreflightContext)
         target: deliverTarget,
         token,
         accountId,
+        agentId: route.agentId,
         rest: client.rest,
         runtime,
         replyToId,
